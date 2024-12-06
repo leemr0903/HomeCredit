@@ -1,0 +1,417 @@
+---
+title: "MSBA_Practice_Modeling_Assignment"
+author: "Maddie Lee"
+date: "2024-10-15"
+output: 
+  html_document:
+    number_sections: no
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+execute:
+  warning: false
+  message: false
+---
+
+# Libraries
+
+```{r message=FALSE, warning=FALSE}
+options(rgl.useNULL = TRUE)
+library(rminer)
+library(rmarkdown)
+library(tidyverse) 
+library(dplyr)
+library(DescTools)
+library(lubridate)
+library(rpact)
+library(skimr)
+library(janitor)
+library(ggplot2)
+library(caret)
+library(MLmetrics)
+library(corrplot)
+library(glmnet)
+library(pROC)
+library(ranger)
+```
+
+# Input cleaned data from EDA
+
+```{r input train and test data}
+#set working directory to downloads
+cloud_wd <- "/Users/madelinelee/Downloads/"
+setwd(cloud_wd)
+
+# Download data
+# full_train <- read_csv("home-credit-default-risk/application_train.csv")
+# test <- read_csv("home-credit-default-risk/application_test.csv")
+
+# Team segmentation baseline data
+
+full_balanced_train <- read_csv("FullBalancedTrain.csv")
+
+train <- read_csv("FivePercBalancedTrain.csv")
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a 30-70 split for the data (20% for validation, 80% for training)
+partition_indices <- createDataPartition(train$TARGET, p = 0.8, list = FALSE)
+
+# Subset the data based on the partition indices
+subset_train <- train[partition_indices, ]
+subset_test <- train[-partition_indices, ]
+
+
+# Convert all character columns to factors
+subset_train <- subset_train %>%
+  mutate(across(where(is.character), as.factor))
+
+subset_test <- subset_test %>%
+  mutate(across(where(is.character), as.factor))
+
+# Convert binary numeric columns to factors
+subset_train <- subset_train %>%
+  mutate(across(where(~ is.numeric(.) && n_distinct(.) == 2), as.factor))
+
+subset_test <- subset_test %>%
+  mutate(across(where(~ is.numeric(.) && n_distinct(.) == 2), as.factor))
+
+
+head(subset_train)
+head(subset_test)
+```
+
+# Initial Model Exploration
+
+```{r check for multicollinearity}
+# Calculate the correlation matrix for numeric predictors
+numeric_vars <- subset_train %>% select(where(is.numeric))
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+
+# Print the correlation matrix
+print(cor_matrix)
+```
+
+# Logistic Regression Model
+
+```{r full logistic regression model}
+full_logistic_model <- glm(TARGET ~ ., data = subset_train, family = binomial)
+summary(full_logistic_model)
+```
+
+```{r variable relationship with target}
+# Loop through each predictor in the dataset and fit a univariate logistic model
+#for (var in names(subset_train)[-which(names(subset_train) == "TARGET")]) {
+#  formula <- as.formula(paste("TARGET ~", var))
+#  model <- glm(formula, data = subset_train, family = binomial)
+#  print(summary(model))
+#}
+```
+
+## Lasso Regression
+
+```{r lasso regression}
+# Prepare the data for glmnet (X as a matrix and y as a vector)
+X <- model.matrix(TARGET ~ . - 1, data = subset_train)
+y <- subset_train$TARGET
+
+# Fit a Lasso model using cross-validation to select the optimal lambda
+lasso_model <- cv.glmnet(X, y, family = "binomial", alpha = 1)
+
+# Best lambda value
+best_lambda <- lasso_model$lambda.min
+print(best_lambda)
+
+# Extract coefficients of the Lasso model at the best lambda
+lasso_coefs <- coef(lasso_model, s = best_lambda)
+
+# Convert the coefficients to a matrix
+lasso_coefs_matrix <- as.matrix(lasso_coefs)
+
+# Extract the names of the variables with non-zero coefficients
+selected_lasso_vars <- rownames(lasso_coefs_matrix)[lasso_coefs_matrix != 0]
+print(selected_lasso_vars)
+```
+
+### Evaluate Lasso performance
+
+```{r evaluate lasso model perf}
+summary(lasso_model)
+lasso_model
+
+# Make predictions on the training set using the Lasso model
+predictions <- predict(lasso_model, newx = X, s = best_lambda, type = "response")
+
+# Convert predictions to binary outcomes based on a threshold (e.g., 0.5)
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+
+# Create a confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = y)
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", accuracy))
+
+# Calculate sensitivity (recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+print(paste("Sensitivity:", sensitivity))
+
+# Calculate specificity
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[, 1])
+print(paste("Specificity:", specificity))
+
+roc_obj <- roc(response = subset_train$TARGET, predictor = predictions)
+auc_value <- auc(roc_obj)
+auc_value
+
+```
+
+### Apply Model to Test
+
+```{r}
+# Prepare the testing data (same transformations as training)
+X_test <- model.matrix(TARGET ~ . - 1, data = subset_test)
+
+# Ensure that the test data has the same columns as the training data
+missing_cols <- setdiff(colnames(X), colnames(X_test))
+if (length(missing_cols) > 0) {
+  # Add missing columns to X_test and fill them with 0
+  X_test <- cbind(X_test, matrix(0, nrow = nrow(X_test), ncol = length(missing_cols)))
+  colnames(X_test)[(ncol(X_test) - length(missing_cols) + 1):ncol(X_test)] <- missing_cols
+}
+
+# Reorder the columns of X_test to match the column order of X
+X_test <- X_test[, colnames(X)]
+
+# Make predictions on the testing set using the Lasso model
+test_predictions <- predict(lasso_model, newx = X_test, s = best_lambda, type = "response")
+
+# Convert predictions to binary outcomes based on a threshold (e.g., 0.5)
+test_predicted_classes <- ifelse(test_predictions > 0.5, 1, 0)
+
+# Create a confusion matrix for the test set
+test_confusion_matrix <- table(Predicted = test_predicted_classes, Actual = subset_test$TARGET)
+print(test_confusion_matrix)
+
+# Calculate accuracy for the test set
+test_accuracy <- sum(diag(test_confusion_matrix)) / sum(test_confusion_matrix)
+print(paste("Test Accuracy:", test_accuracy))
+
+# Calculate sensitivity (recall) for the test set
+test_sensitivity <- test_confusion_matrix[2, 2] / sum(test_confusion_matrix[, 2])
+print(paste("Test Sensitivity:", test_sensitivity))
+
+# Calculate specificity for the test set
+test_specificity <- test_confusion_matrix[1, 1] / sum(test_confusion_matrix[, 1])
+print(paste("Test Specificity:", test_specificity))
+
+# ROC curve and AUC for the test set
+test_roc_obj <- roc(response = subset_test$TARGET, predictor = test_predictions)
+test_auc_value <- auc(test_roc_obj)
+print(paste("Test AUC:", test_auc_value))
+
+```
+
+
+
+# Random Forest Model
+
+```{r train data random forest}
+set.seed(123)
+
+# Fit a Random Forest model using the ranger package
+rf_model <- ranger(
+  formula = TARGET ~ ., 
+  data = subset_train, 
+  probability = TRUE, # Set probability = TRUE to get class probabilities
+  num.trees = 500,
+  replace = TRUE,
+  classification = is.factor(subset_train$TARGET) # Set to TRUE if it's a classification problem
+)
+
+# Make predictions on the test set
+predictions <- predict(rf_model, subset_test)$predictions
+
+
+  # Extract the probability of the positive class (assuming it's the second column)
+  positive_class_prob <- predictions[, 2]
+  
+  # Calculate the AUC
+  roc_curve <- roc(subset_test$TARGET, positive_class_prob)
+  auc_value <- auc(roc_curve)
+  print(auc_value)
+
+```
+
+```{r random forest 2 - lasso predictors}
+# train a random forest model using the predictors indicated by the lasso model
+
+
+# Fit a Random Forest model using the ranger package
+rf_model_2 <- ranger(
+  formula = TARGET ~ SK_ID_CURR + 
+    NAME_INCOME_TYPE + 
+    NAME_EDUCATION_TYPE + 
+    DAYS_BIRTH + 
+    OCCUPATION_TYPE + 
+    REGION_RATING_CLIENT + 
+    WEEKDAY_APPR_PROCESS_START + 
+    LIVE_CITY_NOT_WORK_CITY + 
+    ORGANIZATION_TYPE + 
+    EXT_SOURCE_1 + 
+    EXT_SOURCE_2 + 
+    DAYS_LAST_PHONE_CHANGE + 
+    FLAG_DOCUMENT_3 + 
+    OWN_CAR_AGE_BIN,
+  data = subset_train,
+  probability = TRUE,   # Set to TRUE to get class probabilities
+  num.trees = 500       # Number of trees
+)
+
+
+
+# Make predictions on the test set
+predictions_2 <- predict(rf_model_2, subset_test)$predictions
+
+selected_lasso_vars
+  # Extract the probability of the positive class (assuming it's the second column)
+  positive_class_prob_2 <- predictions_2[, 2]
+  
+  # Calculate the AUC
+  roc_curve_2 <- roc(subset_test$TARGET, positive_class_prob)
+  auc_value <- auc(roc_curve)
+  print(auc_value)
+
+```
+
+# Feature Engineering
+
+```{r feature engineering}
+# train
+subset_train['annuity_income_percentage'] = subset_train['AMT_ANNUITY'] / subset_train['AMT_INCOME_TOTAL']
+subset_train['credit_to_annuity_ratio'] = subset_train['AMT_CREDIT'] / subset_train['AMT_ANNUITY']
+subset_train['credit_to_goods_ratio'] = subset_train['AMT_CREDIT'] / subset_train['AMT_GOODS_PRICE']
+subset_train['credit_to_income_ratio'] = subset_train['AMT_CREDIT'] / subset_train['AMT_INCOME_TOTAL']
+subset_train['income_credit_percentage'] = subset_train['AMT_INCOME_TOTAL'] / subset_train['AMT_CREDIT']
+subset_train['income_per_person'] = subset_train['AMT_INCOME_TOTAL'] / subset_train['CNT_FAM_MEMBERS']
+subset_train['payment_rate'] = subset_train['AMT_ANNUITY'] / subset_train['AMT_CREDIT']
+subset_train['phone_to_birth_ratio'] = subset_train['DAYS_LAST_PHONE_CHANGE'] / subset_train['DAYS_BIRTH']
+
+
+# test
+subset_test['annuity_income_percentage'] = subset_test['AMT_ANNUITY'] / subset_test['AMT_INCOME_TOTAL']
+subset_test['credit_to_annuity_ratio'] = subset_test['AMT_CREDIT'] / subset_test['AMT_ANNUITY']
+subset_test['credit_to_goods_ratio'] = subset_test['AMT_CREDIT'] / subset_test['AMT_GOODS_PRICE']
+subset_test['credit_to_income_ratio'] = subset_test['AMT_CREDIT'] / subset_test['AMT_INCOME_TOTAL']
+subset_test['income_credit_percentage'] = subset_test['AMT_INCOME_TOTAL'] / subset_test['AMT_CREDIT']
+subset_test['income_per_person'] = subset_test['AMT_INCOME_TOTAL'] / subset_test['CNT_FAM_MEMBERS']
+subset_test['payment_rate'] = subset_test['AMT_ANNUITY'] / subset_test['AMT_CREDIT']
+subset_test['phone_to_birth_ratio'] = subset_test['DAYS_LAST_PHONE_CHANGE'] / subset_test['DAYS_BIRTH']
+```
+
+## Lasso Regression w/ feature engineering
+
+```{r lasso regression fe}
+# Prepare the data for glmnet (X as a matrix and y as a vector)
+X <- model.matrix(TARGET ~ . - 1, data = subset_train)
+y <- subset_train$TARGET
+
+# Fit a Lasso model using cross-validation to select the optimal lambda
+lasso_model <- cv.glmnet(X, y, family = "binomial", alpha = 1)
+
+# Best lambda value
+best_lambda <- lasso_model$lambda.min
+print(best_lambda)
+
+# Extract coefficients of the Lasso model at the best lambda
+lasso_coefs <- coef(lasso_model, s = best_lambda)
+
+# Convert the coefficients to a matrix
+lasso_coefs_matrix <- as.matrix(lasso_coefs)
+
+# Extract the names of the variables with non-zero coefficients
+selected_lasso_vars <- rownames(lasso_coefs_matrix)[lasso_coefs_matrix != 0]
+print(selected_lasso_vars)
+```
+
+### Evaluate Lasso performance w/ feature engineering
+
+```{r evaluate lasso model perf}
+summary(lasso_model)
+lasso_model
+
+# Make predictions on the training set using the Lasso model
+predictions <- predict(lasso_model, newx = X, s = best_lambda, type = "response")
+
+# Convert predictions to binary outcomes based on a threshold (e.g., 0.5)
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+
+# Create a confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = y)
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", accuracy))
+
+# Calculate sensitivity (recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+print(paste("Sensitivity:", sensitivity))
+
+# Calculate specificity
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[, 1])
+print(paste("Specificity:", specificity))
+
+roc_obj <- roc(response = subset_train$TARGET, predictor = predictions)
+auc_value <- auc(roc_obj)
+auc_value
+
+```
+
+### Apply Model to Test
+
+```{r lasso on test}
+# Prepare the testing data (same transformations as training)
+X_test <- model.matrix(TARGET ~ . - 1, data = subset_test)
+
+# Ensure that the test data has the same columns as the training data
+missing_cols <- setdiff(colnames(X), colnames(X_test))
+if (length(missing_cols) > 0) {
+  # Add missing columns to X_test and fill them with 0
+  X_test <- cbind(X_test, matrix(0, nrow = nrow(X_test), ncol = length(missing_cols)))
+  colnames(X_test)[(ncol(X_test) - length(missing_cols) + 1):ncol(X_test)] <- missing_cols
+}
+
+# Reorder the columns of X_test to match the column order of X
+X_test <- X_test[, colnames(X)]
+
+# Make predictions on the testing set using the Lasso model
+test_predictions <- predict(lasso_model, newx = X_test, s = best_lambda, type = "response")
+
+# Convert predictions to binary outcomes based on a threshold (e.g., 0.5)
+test_predicted_classes <- ifelse(test_predictions > 0.5, 1, 0)
+
+# Create a confusion matrix for the test set
+test_confusion_matrix <- table(Predicted = test_predicted_classes, Actual = subset_test$TARGET)
+print(test_confusion_matrix)
+
+# Calculate accuracy for the test set
+test_accuracy <- sum(diag(test_confusion_matrix)) / sum(test_confusion_matrix)
+print(paste("Test Accuracy:", test_accuracy))
+
+# Calculate sensitivity (recall) for the test set
+test_sensitivity <- test_confusion_matrix[2, 2] / sum(test_confusion_matrix[, 2])
+print(paste("Test Sensitivity:", test_sensitivity))
+
+# Calculate specificity for the test set
+test_specificity <- test_confusion_matrix[1, 1] / sum(test_confusion_matrix[, 1])
+print(paste("Test Specificity:", test_specificity))
+
+# ROC curve and AUC for the test set
+test_roc_obj <- roc(response = subset_test$TARGET, predictor = test_predictions)
+test_auc_value <- auc(test_roc_obj)
+print(paste("Test AUC:", test_auc_value))
+
+```

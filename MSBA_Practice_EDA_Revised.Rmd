@@ -1,0 +1,482 @@
+---
+title: "MSBA_Practice_EDA"
+author: "Maddie Lee"
+date: "2024-09-14"
+output: 
+  html_document:
+    number_sections: no
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+execute:
+  warning: false
+  message: false
+---
+# Introduction
+
+__Business Problem:__
+
+Financial institutions and lenders often use a customer’s credit history to approve loans and set interest rates. Individuals that lack credit are often denied loans or vulnerable to predatory lenders even if that individual is capable of repaying their loans. This creates a loss of opportunity to the borrower and creditor. 
+
+__Analytics Approach:__
+
+A supervised classification algorithm using a logistic regression model will be employed to predict the probability of loan default. The target variable is if the loan is paid on time and not defaulted (yes/no). We will use data from various sources including telco and transactional information to train our model. 
+
+
+# read and explore data
+```{r message=FALSE, warning=FALSE}
+options(rgl.useNULL = TRUE)
+library(rminer)
+library(rmarkdown)
+library(tidyverse) 
+library(dplyr)
+library(DescTools)
+library(lubridate)
+library(rpact)
+library(skimr)
+library(janitor)
+library(ggplot2)
+library(caret)
+library(MLmetrics)
+library(corrplot)
+```
+
+```{r load datasets}
+#set working directory to downloads
+cloud_wd <- "/Users/madelinelee/Downloads/home-credit-default-risk"
+setwd(cloud_wd)
+
+
+test <- read.csv(file = "application_test.csv", stringsAsFactors = TRUE)
+train <- read.csv(file = "application_train.csv", stringsAsFactors = TRUE)
+```
+
+
+
+# Initial Questions to Guide Exploration
+
+1. What is the distribution of the target variable in the training dataset? Is it balanced or imbalanced?
+2. Are there missing values in the dataset? If so, which columns have the most missing data?
+3. Are there any columns with near-zero or zero variance?
+4. What are the top predictors of loan repayment based on correlation with the target variable?
+5. How does the transactional data (bureau, previous_application) relate to the target variable? Are there strong predictors in these datasets?
+6. Are there any anomalies or suspicious values in the dataset that might indicate data quality issues?
+7. What transformations are necessary to prepare the data for modeling?
+
+
+# Initial Exploration
+
+```{r intitial exploration of data}
+# Convert all 0/1 numeric variables to factors
+train <- train %>%
+  mutate(across(where(~ all(. %in% c(0, 1))), as.factor))
+train <- train %>% mutate_if(is.character, as.factor)
+
+train$REGION_RATING_CLIENT <- as.factor(train$REGION_RATING_CLIENT)
+train$REGION_RATING_CLIENT_W_CITY <- as.factor(train$REGION_RATING_CLIENT_W_CITY)
+
+train$TARGET <- as.numeric(train$TARGET)
+
+# train
+head(train)
+str(train)
+
+```
+
+# Target Distribution
+
+```{r train target distribution}
+train %>% tabyl(TARGET) # Check balance of the target variable
+
+train_target_distribution <- train %>%
+  count(TARGET) %>%
+  mutate(percentage = n / sum(n) * 100)
+
+ggplot(train_target_distribution, aes(x = factor(TARGET), y = percentage)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Target Variable Distribution", x = "Target", y = "Percentage")
+
+prop.table(train_target_distribution)
+
+
+```
+Target: 0 - 282686 92% \
+        1 -  24825 8% \ 
+
+The distribution of the target variable shows that the dataset is highly imbalanced, with a majority of clients not defaulting.
+This imbalance suggests that a simple majority class classifier would achieve a high accuracy, but it would fail to capture true positive defaults effectively. Will want to use additional evaluation metrics like F1-score, precision, and recall.
+
+
+
+# Explore Numeric Variables 
+
+```{r numeric predictors analysis}
+
+# Numeric predictors analysis
+numeric_columns <- train %>% select_if(is.numeric)
+
+cat("### Numeric Predictors Analysis ###\n")
+for (colname in names(numeric_columns)) {
+  # Count missing values
+  missing_values <- sum(is.na(train[[colname]]))
+  
+  # Print missing values count
+  cat(paste("\nVariable:", colname, "\nMissing values:", missing_values, "\n"))
+  
+  # Plot distribution
+  p <- ggplot(train, aes_string(x = colname)) +
+    geom_histogram(bins = 30, fill = "blue", color = "black", alpha = 0.7) +
+    ggtitle(paste("Distribution of", colname)) +
+    theme_minimal()
+  print(p)
+  
+  # Summary statistics to understand the distribution
+  summary_stats <- summary(train[[colname]])
+  cat("Summary statistics:\n")
+  print(summary_stats)
+  
+  # Check if distribution is skewed or has outliers
+  if (summary_stats[4] - summary_stats[3] > 3 * (summary_stats[6] - summary_stats[4])) {
+    cat("Comment: The distribution of", colname, "has major outliers\n")
+  } else {
+    cat("Comment: The distribution of", colname, "has no major outliers.\n")
+  }
+}
+```
+__Major Insights:__
+
+
+`AMT_INCOME_TOTAL`   
+
+- **Comment**: The distribution of `AMT_INCOME_TOTAL` is right skewed with a mean of 168,798.   
+
+`AMT_CREDIT`
+
+- **Comment**: The distribution of `AMT_CREDIT` is right skewed with a mean of 599,026.    
+
+`AMT_ANNUITY`
+
+- **Comment**: The distribution of `AMT_ANNUITY` is approximately normal with slight right skew and mean of 27109.   
+
+`AMT_GOODS_PRICE`
+
+- **Comment**: The distribution of `AMT_GOODS_PRICE` is right skewed with mean of 538396.   
+
+`DAYS_BIRTH`
+
+- **Comment**: The distribution of `DAYS_BIRTH` is normal with mean of 16037 days.   
+
+`DAYS_EMPLOYED`
+
+- **Comment**: The distribution of `DAYS_EMPLOYED` is bimodal with mean of 63815.   
+
+`DAYS_REGISTRATION`
+
+- **Comment**: The distribution of `DAYS_REGISTRATION` is left skewed with an average of 4986.    
+
+`DAYS_ID_PUBLISH`
+
+- **Comment**: The distribution of `DAYS_ID_PUBLISH` is approximately normal with mean of 2994.    
+
+`CNT_CHILDREN`
+- **Comment**: The distribution of `CNT_CHILDREN` is right skewed with an average of .4 (1) and max 19.    
+
+`REGION_POPULATION_RELATIVE`
+- **Comment**: The distribution of `REGION_POPULATION_RELATIVE` is approximately normally with mean of .021.   
+
+`OBS_30_CNT_SOCIAL_CIRCLE`
+- **Comment**: The distribution of `OBS_30_CNT_SOCIAL_CIRCLE` is right skewed with a mean of 1.422.   
+
+`DEF_30_CNT_SOCIAL_CIRCLE`
+- **Comment**: The distribution of `DEF_30_CNT_SOCIAL_CIRCLE` is right skewed with a mean of 1.1434.    
+
+`OBS_60_CNT_SOCIAL_CIRCLE`
+- **Comment**: The distribution of `OBS_60_CNT_SOCIAL_CIRCLE` is right skewed with a mean of 1.4055.    
+
+`DEF_60_CNT_SOCIAL_CIRCLE`
+- **Comment**: The distribution of `DEF_60_CNT_SOCIAL_CIRCLE` is right skewed with a mean of .1.    
+
+`DAYS_LAST_PHONE_CHANGE`
+- **Comment**: The distribution of `DAYS_LAST_PHONE_CHANGE` is left skewed with a mean of 962.9.    
+
+`CNT_FAM_MEMBERS`
+- **Comment**: The distribution of `CNT_FAM_MEMBERS` is right skewed with mean of 2.153.    
+
+`REGION_RATING_CLIENT`
+- **Comment**: The distribution of `REGION_RATING_CLIENT` is right skewed with mean of 2.153.    
+
+`OWN_CAR_AGE`
+- **Comment**: The distribution of `OWN_CAR_AGE` is right skewed with a mean of 12.06.   
+
+`HOUR_APPR_PROCESS_START`
+- **Comment**: The distribution of `HOUR_APPR_PROCESS_START` is approximately normally distributed with a mean of 12.06.   
+
+# Explore Categorical Variables
+```{r categorical variable exploration}
+# Convert character columns to factors
+train <- train %>% mutate_if(is.character, as.factor)
+
+# Categorical predictors analysis
+categorical_columns <- train %>% select_if(is.factor)
+
+cat("\n### Categorical Predictors Analysis ###\n")
+for (colname in names(categorical_columns)) {
+  # Count missing values
+  missing_values <- sum(is.na(train[[colname]]))
+  
+  # Print missing values count
+  cat(paste("\nVariable:", colname, "\nMissing values:", missing_values, "\n"))
+  
+  # Plot distribution
+  p <- ggplot(train, aes_string(x = colname)) +
+    geom_bar(fill = "blue", color = "black", alpha = 0.7) +
+    ggtitle(paste("Distribution of", colname)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x labels for better readability
+  print(p)
+  
+  # Comment on the distribution of categories
+  freq_table <- table(train[[colname]], useNA = "ifany")
+  cat("Frequency distribution:\n")
+  print(freq_table)
+  
+  if (max(freq_table) / sum(freq_table) > 0.8) {
+    cat("Comment: The distribution of", colname, "is highly imbalanced.\n")
+  } else {
+    cat("Comment: The distribution of", colname, "is relatively balanced.\n")
+  }
+}
+
+```
+
+__Major Insights:__
+
+`NAME_CONTRACT_TYPE`
+
+- **Comment**: The distribution of `NAME_CONTRACT_TYPE` is highly imbalanced. The dominant category is cash loans.  
+
+`CODE_GENDER`
+
+- **Comment**: The distribution of `CODE_GENDER` is relatively balanced. The dominant category is Female.  
+
+`FLAG_OWN_CAR`
+ 
+- **Comment**: The distribution of `FLAG_OWN_CAR` is relatively balanced. The dominant category is No.
+
+`FLAG_OWN_REALTY`
+
+- **Comment**: The distribution of `FLAG_OWN_REALTY` is relatively balanced. The dominant category is Yes.
+
+`NAME_TYPE_SUITE`
+- **Comment**: The distribution of `NAME_TYPE_SUITE` is highly imbalanced. The dominant category is unaccompanied.
+
+`NAME_INCOME_TYPE`
+- **Comment**: The distribution of `NAME_INCOME_TYPE` is relatively balanced. The dominant category is working.
+
+`NAME_EDUCATION_TYPE`
+- **Comment**: The distribution of `NAME_EDUCATION_TYPE` is relatively balanced. The dominant category is secondary.
+
+`NAME_FAMILY_STATUS`
+- **Comment**: The distribution of `NAME_FAMILY_STATUS` is relatively balanced. The dominant category is married.
+
+`NAME_HOUSING_TYPE`
+- **Comment**: The distribution of `NAME_HOUSING_TYPE` is highly imbalanced. The dominant category is house/apartment.
+
+`OCCUPATION_TYPE`
+- **Comment**: The distribution of `OCCUPATION_TYPE` is relatively balanced. The dominant category is accountants and laborers.
+
+`WEEKDAY_APPR_PROCESS_START`
+- **Comment**: The distribution of `WEEKDAY_APPR_PROCESS_START` is is relatively balanced. The dominant category is Tuesday.
+
+`ORGANIZATION_TYPE`
+- **Comment**: The distribution of `ORGANIZATION_TYPE` is highly imbalanced. The dominant category is Business Entity Type 2.
+
+`FONDKAPREMONT_MODE`
+- **Comment**: The distribution of `FONDKAPREMONT_MODE` is relatively balanced. The dominant category is NA.
+
+`HOUSETYPE_MODE`
+- **Comment**: The distribution of `HOUSETYPE_MODE` is relatively balanced. The dominant category is block of flats.
+
+`WALLSMATERIAL_MODE`
+- **Comment**: The distribution of `WALLSMATERIAL_MODE` is relatively balanced. The dominant category is NA.
+
+`EMERGENCYSTATE_MODE`
+- **Comment**: The distribution of `EMERGENCYSTATE_MODE` is relatively balanced. The dominant category is No.
+
+
+# Missing Values
+```{r missing values in train}
+#explore missing values in train
+train_missing_values <- train %>%
+  summarise_all(~ sum(is.na(.))) %>%
+  pivot_longer(cols = everything(), names_to = "column", values_to = "missing_count") %>%
+  mutate(missing_percentage = missing_count / nrow(train) * 100) %>%
+  arrange(desc(missing_percentage))
+
+train_missing_values
+
+#columns with more than 50% missing
+missing_data_summary <- sapply(train, function(x) sum(is.na(x)) / nrow(train))
+columns_with_high_missing <- names(missing_data_summary[missing_data_summary > 0.5])
+columns_with_high_missing
+```
+There appear to be many columns in train with missing values, with 38 variables having greater than or equal to 50% missing data. We may chose to remove these columns for analysis.
+
+For other columns with a moderate percentage of missing values, we can impute missing values using median (numeric) or mode (categorical).
+
+# Zero or near-zero variance columns
+
+```{r}
+# View variables that are near zero variance 
+nearZeroVar(train,saveMetrics = TRUE)
+
+# Remove variables with near zero variance
+filter_train <- train |> 
+  select(-c(DAYS_EMPLOYED, FLAG_MOBIL, FLAG_CONT_MOBILE, 
+            REG_REGION_NOT_LIVE_REGION, LIVE_REGION_NOT_WORK_REGION,
+            BASEMENTAREA_AVG, LANDAREA_AVG, NONLIVINGAREA_AVG,
+            BASEMENTAREA_MODE, LANDAREA_MODE, NONLIVINGAREA_MODE,
+            BASEMENTAREA_MEDI, LANDAREA_MEDI, NONLIVINGAREA_MEDI,
+            HOUSETYPE_MODE, EMERGENCYSTATE_MODE, FLAG_DOCUMENT_2,
+            FLAG_DOCUMENT_4, FLAG_DOCUMENT_5,FLAG_DOCUMENT_7, FLAG_DOCUMENT_9,
+            FLAG_DOCUMENT_10, FLAG_DOCUMENT_11,FLAG_DOCUMENT_12,
+            FLAG_DOCUMENT_13, FLAG_DOCUMENT_14,
+            FLAG_DOCUMENT_15,FLAG_DOCUMENT_16, FLAG_DOCUMENT_17,
+            FLAG_DOCUMENT_18, FLAG_DOCUMENT_19, FLAG_DOCUMENT_20,
+            FLAG_DOCUMENT_21, AMT_REQ_CREDIT_BUREAU_DAY,
+            AMT_REQ_CREDIT_BUREAU_HOUR, AMT_REQ_CREDIT_BUREAU_WEEK))
+
+# Update test
+test <- test |> 
+  select(-c(DAYS_EMPLOYED, FLAG_MOBIL, FLAG_CONT_MOBILE, 
+            REG_REGION_NOT_LIVE_REGION, LIVE_REGION_NOT_WORK_REGION,
+            BASEMENTAREA_AVG, LANDAREA_AVG, NONLIVINGAREA_AVG,
+            BASEMENTAREA_MODE, LANDAREA_MODE, NONLIVINGAREA_MODE,
+            BASEMENTAREA_MEDI, LANDAREA_MEDI, NONLIVINGAREA_MEDI,
+            HOUSETYPE_MODE, EMERGENCYSTATE_MODE, FLAG_DOCUMENT_2,
+            FLAG_DOCUMENT_4, FLAG_DOCUMENT_5,FLAG_DOCUMENT_7, FLAG_DOCUMENT_9,
+            FLAG_DOCUMENT_10, FLAG_DOCUMENT_11,FLAG_DOCUMENT_12,
+            FLAG_DOCUMENT_13, FLAG_DOCUMENT_14,
+            FLAG_DOCUMENT_15,FLAG_DOCUMENT_16, FLAG_DOCUMENT_17,
+            FLAG_DOCUMENT_18, FLAG_DOCUMENT_19, FLAG_DOCUMENT_20,
+            FLAG_DOCUMENT_21, AMT_REQ_CREDIT_BUREAU_DAY,
+            AMT_REQ_CREDIT_BUREAU_HOUR, AMT_REQ_CREDIT_BUREAU_WEEK))
+```
+
+
+# Feature Engineering
+```{r remove and update missing values}
+# Remove columns with high missing percentages (e.g., >90%) in train
+train <- train %>% select_if(~sum(is.na(.)) / nrow(train) < 0.9)
+
+
+# add median or mode for columns with moderate missing values
+train <- train %>%
+  mutate_if(is.numeric, ~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>%
+  mutate_if(is.factor, ~fct_explicit_na(., na_level = "Missing"))
+
+```
+
+```{r housing variables}
+# Combine housing variables
+housing_variables <-  c("LIVINGAREA_AVG", "NONLIVINGAPARTMENTS_AVG", "APARTMENTS_MODE",
+         "YEARS_BEGINEXPLUATATION_MODE", 
+         "YEARS_BUILD_MODE", "COMMONAREA_MODE", "ENTRANCES_MODE", 
+         "FLOORSMAX_MODE", "FLOORSMIN_MODE", "LIVINGAPARTMENTS_MODE",
+         "NONLIVINGAPARTMENTS_MODE", "APARTMENTS_MEDI", 
+         "YEARS_BEGINEXPLUATATION_MEDI", "YEARS_BUILD_MEDI", "COMMONAREA_MEDI",
+         "ELEVATORS_MEDI", "ENTRANCES_MEDI", "FLOORSMAX_MEDI", "FLOORSMIN_MEDI", 
+         "LIVINGAPARTMENTS_MEDI", "LIVINGAREA_MEDI", 
+         "NONLIVINGAPARTMENTS_MEDI", "FONDKAPREMONT_MODE", 
+         "TOTALAREA_MODE", "WALLSMATERIAL_MODE")
+
+# Feature engineering for the new variable - should prevent NAs from being considered as values? 
+train <- train %>%
+  mutate(HOUSING_INFO = as.factor(case_when(
+    # Few values entered
+    rowSums(!is.na(select(., all_of(housing_variables)))) <= 2 ~ "Few", 
+    # All values entered
+    rowSums(!is.na(select(., all_of(housing_variables)))) == length(housing_variables)
+    ~ "All",
+    # Two or more values entered
+    rowSums(!is.na(select(., all_of(housing_variables)))) > 2 ~ "Some"
+)))
+```
+
+
+# Models
+
+```{r majority class model}
+# Calculate the majority class 
+majority_class <- train %>%
+  summarise(majority_class = Mode(TARGET))
+
+majority_class_value <- majority_class$majority_class
+
+# Calculate accuracy for the majority class 
+majority_accuracy <- mean(train$TARGET == majority_class_value)
+print(paste("Majority Class Accuracy:", majority_accuracy))
+
+# Generate majority class predictions
+majority_predictions <- rep(majority_class, length(train$TARGET))
+
+# Convert target variable and predictions to factors (for confusion matrix)
+target_variable <- factor(train$TARGET)
+majority_predictions <- factor(majority_predictions, levels = levels(target_variable))
+
+# Calculate confusion matrix
+confusion <- confusionMatrix(majority_predictions, target_variable)
+print(confusion)
+
+# Convert factor predictions and true values to numeric for MLmetrics compatibility
+numeric_target_variable <- as.numeric(as.character(target_variable))
+numeric_majority_predictions <- as.numeric(as.character(majority_predictions))
+
+# Calculate evaluation metrics: Precision, Recall, and F1-Score
+Precision(y_pred = numeric_majority_predictions, y_true = numeric_target_variable, positive = as.numeric(majority_class))
+Recall(y_pred = numeric_majority_predictions, y_true = numeric_target_variable, positive = as.numeric(majority_class))
+F1_Score(y_pred = numeric_majority_predictions, y_true = numeric_target_variable, positive = as.numeric(majority_class))
+
+
+```
+A model that simply predicts the majority class for every observation would be correct 92% of the time. The high accuracy can come from the largely imbalanced dataset.
+
+precision: .92
+recall: 1
+F1_score: .96
+
+The high precision indicates that when the majority class is predicted, it is mostly correct. Does not reflect the model's ability to detect minority class instances.
+The low recall for the minority class reveals that the majority class model is missing a significant proportion of positive instances, making it unreliable for scenarios where detecting minority instances is crucial (e.g., identifying loan defaults or frauds).
+The F1-Score, combining precision and recall, is low, confirming that while the model is good at predicting the majority class, it performs poorly overall due to its inability to detect minority instances.
+
+# Correlation Analysis and Top Predictors
+
+```{r numeric variable corr}
+# Compute correlation of numeric variables with the target variable
+numeric_vars <- train %>% select_if(is.numeric)
+numeric_vars$target <- train$TARGET
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+cor_matrix
+
+# Top predictors
+cor_target <- cor_matrix[, "target"]
+top_predictors <- sort(abs(cor_target), decreasing = TRUE)[2:8] 
+top_predictors
+```
+
+Variables for further review with high correlations and possibly review other variables for transformations
+
+
+# Results
+
+Results:
+The target variable in the training dataset is highly imbalanced, requiring special handling in modeling.
+Several columns have high percentages of missing data and should be removed or imputed.
+The top predictors identified should be further refined and validated using feature selection techniques.
+
+# Summary 
+Key Insights and Next Steps:
+Data transformations may be necessary before model building.
+Classification techniques should be considered.
+Additional data sources such as `installments_payments.csv` and `credit_card_balance.csv` can be further explored for stronger predictive power.
+
