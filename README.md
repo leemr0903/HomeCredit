@@ -1,7 +1,7 @@
 # Home Credit Default Risk Analysis
 
 ## Overview
-The **Home Credit Default Risk Analysis** project aims to enhance financial inclusion by predicting loan repayment capabilities for individuals with limited or no credit history. Using alternative data, we developed a supervised machine learning model to evaluate creditworthiness and provide actionable insights for lenders.
+The [**Home Credit Default Risk Analysis**](https://www.kaggle.com/competitions/home-credit-default-risk) project aims to enhance financial inclusion by predicting loan repayment capabilities for individuals with limited or no credit history. Using alternative data, we developed a supervised machine learning model to evaluate creditworthiness and provide actionable insights for lenders.
 
 ## Business Problem
 Financial institutions often rely on traditional credit scores, which can exclude individuals lacking credit history. This project focuses on creating a predictive model that utilizes alternative data sources, enabling informed lending decisions and expanding opportunities for both borrowers and lenders.
