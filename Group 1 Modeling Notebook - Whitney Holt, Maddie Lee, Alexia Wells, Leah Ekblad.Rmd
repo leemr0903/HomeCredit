@@ -1,0 +1,576 @@
+---
+title: "Group 1 - Modeling Notebook"
+author: "Whitney Holt, Leah Ekblad, Maddie Lee, Alexia Wells"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+execute:
+  warning: false
+  message: false
+---
+
+# Introduction
+
+## Project Goal
+
+This project aims to build a predictive model that evaluates loan repayment capability for individuals with limited or no traditional credit history. Financial institutions often rely on credit scores, but many individuals lack comprehensive credit records, limiting their access to credit or subjecting them to higher interest rates. A successful model will allow Home Credit to assess applicants based on alternative data, thus expanding credit access responsibly.
+
+## Business Problem
+
+Financial institutions and lenders often use a customer’s credit history to approve loans and set interest rates. Individuals that lack credit are often denied loans or vulnerable to predatory lenders even if that individual is capable of repaying their loans. This creates a loss of opportunity to the borrower and creditor.
+
+## Analytic Problem
+
+**Measure of Success:**
+
+Success is measured by the model’s ability to increase loan approval rates among non-traditional borrowers without compromising risk thresholds, ultimately contributing to Home Credit’s profitability and customer base growth.
+
+**Data Issues:**
+
+  1.    *Missing Values*: Many features contain missing values, which can introduce bias if not handled properly. Missing values may represent lack of information, errors in data entry, or genuine absences of certain attributes. Imputation techniques need to be carefully chosen to avoid distorting the underlying patterns in the data.
+
+  2.    *High Cardinality in Categorical Variables*: Certain categorical variables, such as occupation type or income type, have numerous unique values, increasing model complexity. High cardinality can lead to overfitting in some models, particularly if one-hot encoding is applied without adequate dimensionality reduction.
+  
+  3.    *Imbalanced Target Variable*: The target variable indicating loan default is often imbalanced, with significantly more instances of non-default than default cases. This imbalance can bias models towards predicting the majority class, reducing the model’s ability to identify true default risks accurately.
+  
+  4.    *Inconsistent Factor Levels*: Between training and test datasets, some categorical variables contain levels present in one dataset but missing in another (e.g., NAME_INCOME_TYPE may have categories in the test set not observed in the training set). This inconsistency complicates the application of models trained on one dataset to the other and requires alignment of factor levels or handling of unknown levels.
+  
+  5.    *Collinearity Among Features*: Certain features, such as income and credit amounts, are likely correlated, which can lead to multicollinearity in linear models. Multicollinearity can inflate the variance of coefficient estimates, making the model sensitive to small changes in the data and potentially reducing interpretability.
+  
+  6.    *Potential Outliers and Noise*: Some numerical features may contain extreme values that could be outliers or data entry errors. These values can distort model training, especially in distance-based or sensitive algorithms, necessitating careful inspection and possible transformation or filtering.
+
+## Purpose of the Notebook
+
+This notebook documents each stage of the modeling process: data preprocessing, feature engineering, model selection, model performance, and results analysis. Each step ensures that the model is robust, interpretable, and suitable for Home Credit’s operational needs.
+
+## Group Members & Contributions
+
+**All members**:
+
+-   Majority Classifier (Baseline)
+-   Logisic Regression
+
+**Maddie Lee**:
+
+-   Stepwise Regression
+-   Penalized Regression
+-   Random Forest
+
+**Alexia Wells**:
+
+-   Reported EDA
+-   Naive Bayes
+-   LightGBM Boosted Trees
+-   Baysian Additive Regression Trees - BART
+-   Random Forest
+-   Extra Trees
+-   Ensemble Methods
+
+**Leah Ekblad**:
+
+-   Penalized Regression
+-   Naive Bayes
+-   Random Forest
+
+**Whitney Holt**:
+
+-   Penalized Regression
+-   Naive Bayes
+
+# Data Preparation
+
+## Data Preprocessing
+
+Here is an overview of completed steps in the exploratory data analysis (EDA) stage:
+
+-   Converted categorical variables to factors
+-   Imputed missing data with mean and mode
+-   Removed near zero variance and zero variance predictors
+-   Removed highly correlated predictors
+-   Conducted feature engineering with binning
+-   Ensured factor levels were aligned between the train and test sets
+
+Incorporating feature engineering significantly improved the success of the models. As mentioned earlier, there were two feature engineered variables created in the EDA process. These were OWN_CAR_AGE_BIN and HOUSING_INFO, both were binning variables.
+
+The original OWN_CAR_AGE variable, a numerical field representing the age of a client’s car, had 200,912 missing values, indicating that missing values are informative. Thus, to keep the integrity of the variable, it was transformed into a categorical feature with four levels: Missing, Low, Medium, and High. To determine the ranges of car age, some research was conducted. As of 2024, S&P Global stated that most vehicles are 12.6 years old on average. Clement, a pre-owned car company, suggested that a “sweet spot” for cars is between 2-5 years old and 15-20 years tend to be nearing the end of their services (https://clementpreowned.com/blog/how-many-miles-car-lasts). For that reason, Low is from 0-5, Medium from 6-15, and High from 16-100.
+
+The HOUSING_INFO variable was created to consolidate approximately 25 housing-related columns. This approach assessed whether applicants’ housing data was fully, partially, or minimally complete. The data was categorized as 'All' if every column was filled, 'Some' for more than two columns completed, and 'Few' if only 0-2 columns contained values. It is important to note that missing values were excluded from being counted as filled entries.
+
+## Creating New Columns
+
+The calculated columns below have been adapted from winning Kaggle notebooks.
+
+  1.	*Annuity to Income Percentage*: This feature captures the proportion of an applicant's income that is dedicated to loan annuity payments. A higher percentage suggests that a larger portion of the applicant’s income goes toward debt repayment, which could indicate potential financial strain.
+
+  2.	*Car to Age Ratio*: This ratio compares the age of the applicant's car to their own age, potentially indicating the timing of asset acquisition. A lower ratio may imply that the individual acquired the car more recently, which could correlate with financial stability or asset-building behavior.
+
+  3.	*Car to Employment Ratio*: By dividing the car’s age by the applicant’s employment duration, this feature provides insight into asset longevity relative to job stability. A longer employment duration combined with a relatively newer car may suggest financial resilience and asset maintenance capability.
+
+  4.	*Children to Family Members Ratio*: This feature represents the proportion of children in the family, highlighting the applicant's dependency load. A higher ratio might indicate a greater financial burden per family member, as there are more dependents per income earner.
+
+  5.	*Credit to Annuity Ratio*: This ratio measures the scale of the loan relative to the annual annuity payments. A higher value might suggest a substantial loan burden, which could increase financial strain and affect the applicant’s repayment ability.
+
+  6.	*Credit to Goods Price Ratio*: The ratio of the total credit amount to the price of the goods financed indicates potential over- or under-financing. This feature could reveal if the loan significantly exceeds the cost of the item being financed, which may correlate with riskier loan profiles.
+
+  7.	*Credit to Income Ratio*: This feature assesses the proportion of credit in relation to total income, highlighting financial strain. A higher ratio suggests that the applicant's loan amount is large relative to their income, which may indicate potential difficulty in managing repayments.
+
+  8.	*Employment Duration to Age Percentage*: This ratio provides insight into career stability by showing employment duration as a percentage of the applicant's life span. A higher percentage may imply consistent employment, which is often a positive indicator of financial reliability.
+
+  9.	*Income to Credit Percentage*: This feature compares the applicant's income to the credit amount, representing income adequacy for loan repayment. A higher ratio suggests that the applicant’s income level is sufficient to support the loan amount, which could imply lower risk.
+
+  10.	*Income per Child*: This feature calculates the average income available per child in the family, giving insight into financial capacity relative to family size. A higher income per child might indicate more financial flexibility to manage household needs and debt obligations.
+
+  11.	*Income per Family Member*: By dividing income by the number of family members, this feature shows the income available per person. It provides a view of income distribution within the household, which could indicate financial stability when income per person is relatively high.
+
+  12.	*Payment Rate*: The payment rate represents the proportion of the loan that is repaid annually. A higher payment rate suggests a more aggressive repayment schedule, which may indicate a stronger commitment to debt clearance.
+
+  13.	*Phone Change to Age Ratio*: This ratio compares the time since the applicant last changed their phone to their age, potentially indicating stability in communication. Applicants with recent phone changes may demonstrate instability, whereas a longer duration could suggest consistency.
+
+  14.	*Phone Change to Employment Duration Ratio*: This feature measures the time since the last phone change relative to employment duration, which could hint at job or residency stability. A longer duration since the last phone change might correlate with consistency in employment or personal life.
+  
+## Subsetting
+
+Due to the exceptionally large data set, five percent of the training data was used to fit the models. This was done through downsampling the majority class until it was the same size as the minority class. 
+
+```{r setup, eval=FALSE, include=FALSE, echo = FALSE}
+# WILL NOT BE INCLUDED IN THE FINAL HTML DOC
+
+# Loading required packages
+library(tidyverse)
+library(caret)
+library(psych)
+library(knitr)
+library(kableExtra)
+library(e1071)
+library(rminer)
+library(pROC)
+library(glmnet)
+library(randomForest)
+
+# Setting working directory
+cloud_wd <- "C:/Users/Whitney Holt/OneDrive - University of Utah/Documents/MSBA/6. Fall 2024/IS 6812 - Capstone Practice Project/Modeling"
+setwd(cloud_wd)
+
+# Loading Data
+FivePercBalancedTrain <- read_csv("FivePercBalancedTrain.csv")
+ImputedTest <- read_csv("ImputedTest.csv")
+
+# Assuming FivePercBalancedTrain and ImputedTest are your data frames
+missing_columns <- setdiff(names(FivePercBalancedTrain), names(ImputedTest))
+
+# Output the missing column names
+print(missing_columns)
+
+# Removing CNT_CHILDREN_BIN from the set
+FivePercBalancedTrain <- subset(FivePercBalancedTrain, select = -CNT_CHILDREN_BIN)
+
+# Feature Engineering
+FivePercBalancedTrain['annuity_income_percentage'] = FivePercBalancedTrain['AMT_ANNUITY'] / FivePercBalancedTrain['AMT_INCOME_TOTAL']
+FivePercBalancedTrain['credit_to_annuity_ratio'] = FivePercBalancedTrain['AMT_CREDIT'] / FivePercBalancedTrain['AMT_ANNUITY']
+FivePercBalancedTrain['credit_to_goods_ratio'] = FivePercBalancedTrain['AMT_CREDIT'] / FivePercBalancedTrain['AMT_GOODS_PRICE']
+FivePercBalancedTrain['credit_to_income_ratio'] = FivePercBalancedTrain['AMT_CREDIT'] / FivePercBalancedTrain['AMT_INCOME_TOTAL']
+FivePercBalancedTrain['income_credit_percentage'] = FivePercBalancedTrain['AMT_INCOME_TOTAL'] / FivePercBalancedTrain['AMT_CREDIT']
+FivePercBalancedTrain['income_per_person'] = FivePercBalancedTrain['AMT_INCOME_TOTAL'] / FivePercBalancedTrain['CNT_FAM_MEMBERS']
+FivePercBalancedTrain['payment_rate'] = FivePercBalancedTrain['AMT_ANNUITY'] / FivePercBalancedTrain['AMT_CREDIT']
+FivePercBalancedTrain['phone_to_birth_ratio'] = FivePercBalancedTrain['DAYS_LAST_PHONE_CHANGE'] / FivePercBalancedTrain['DAYS_BIRTH']
+```
+
+# Model Selection
+
+The following predictive models were created for performance comparison:
+
+-   Majority Classifier (Baseline)
+-   Logistic Regression
+-   Stepwise Regression
+-   Penalized Regression
+-   Naive Bayes
+-   Bayesian Additive Regression Trees - BART
+-   Random Forest
+-   LightGBM Boosted Trees
+-   Extra Trees
+-   Ensemble
+
+In our modeling process, hyperparameter tuning played a crucial role in optimizing the performance of our models.  Hyperparameter choices were informed by cross-validation and grid search techniques, ensuring that the models were fine-tuned for optimal performance on the validation set while generalizing well to unseen data.
+
+# Model Performance
+```{r, include=FALSE}
+# Load libraries
+library(tidyverse)
+library(caret)
+library(psych)
+library(knitr)
+library(kableExtra)
+library(e1071)
+library(rminer)
+library(pROC)
+library(glmnet)
+library(randomForest)
+```
+
+```{r include=FALSE, echo = FALSE}
+# WILL NOT BE INCLUDED IN THE FINAL HTML DOC
+# Create a data frame for model performance comparison
+model_performance <- data.frame(
+  Model_Type = c(
+    "Majority Class Classifier", "Logistic Regression", "Logistic Regression",
+    "Logistic Regression", "Logistic Regression", "Logistic Regression",
+    "Naive Bayes", "LASSO Regression", "Random Forest", "Random Forest",
+    "Random Forest", "Random Forest", "Random Forest", "Random Forest",
+    "Random Forest", "Extra Trees", "LightGBM Boosted Trees",
+    "Bayesian Additive Regression Trees (BART)", "Ensemble Model", 
+    "Ensemble Model", "Ensemble Model", "Ensemble Model"
+  ),
+  Model_Description = c(
+    "Baseline Model", 
+    "Feature engineering, all predictors",
+    "All predictors",
+    "All predictors, stepwise",
+    "Feature engineering, all predictors",
+    "Feature engineering, attribute selection",
+    "Feature engineering", 
+    "Feature engineering", 
+    "500 trees", 
+    "Feature engineering, 500 trees", 
+    "Feature engineering, 100 trees",
+    "Top 10 features, 500 trees", 
+    "Using LASSO-selected predictors, 500 trees",
+    "MTRY Adjustment, 500 trees",
+    "Feature engineering, all predictors, auto hyperparameter tuning", 
+    "Feature engineering, all predictors, 1000 trees, auto hyperparameter tuning for min_n()", 
+    "Feature engineering, all predictors, auto hyperparameter tuning",
+    "Feature engineering, all predictors, auto hyperparameter tuning",
+    "LightGBM + BART + Logistic Regression",
+    "Random Forest, Logistic Regression, and BART",
+    "LightGBM + Random Forest + Extra Trees + Logistic Regression",
+    "Random Forest + BART + Logistic Regression + Extra Trees"
+  ),
+  In_Sample_AUC = c(
+    0.5, 0.77, 0.68, 0.74, 0.691, NA, 0.68, 0.72, 
+    0.72, NA, NA, NA, 0.71, NA, 0.69, 0.69, 0.69, 0.693, 
+    NA, NA, NA, NA
+  ),
+  Out_of_Sample_AUC = c(
+    0.5, 0.66, 0.65, 0.67, NA, NA, 0.66, 0.68, 0.68, NA, NA, NA, 
+    0.68, NA, NA, NA, NA, NA, NA, NA, NA, NA
+  ),
+  Kaggle_Score = c(
+    NA, NA, NA, 0.67723, 0.67896, 0.639271, 0.58287, 0.67659, NA, 0.67362, 
+    0.66366, 0.66366, 0.67624, 0.67384, 0.69877, 0.69339, 0.68676, 0.70113, 
+    0.69169, 0.70050, 0.69765, 0.70311
+  )
+)
+```
+
+For the most part, model's were compared to the out-of-sample AUC against the AUC of the baseline majority classifier (AUC = 0.5). Some group members submitted all of their models to Kaggle and did not calculate each in-sample or out-of-sample AUC. Other group members submitted the best-performing out-of-sample models to Kaggle to receive a Kaggle score.
+
+Here are the results for each of these predictive models, which were trained using the balanced 5% of the full training set and evaluated using a subset of imbalanced data. The "model details" in the table below briefly indicate hyper parameter tuning. 
+
+```{r echo = FALSE}
+# WILL NOT BE INCLUDED IN THE FINAL HTML DOC
+# Display the styled table
+kable(model_performance, 
+      caption = "Model Performance Comparison",
+      col.names = c("Model Type", "Model Description", "In-Sample AUC", "Out-of-Sample AUC", "Kaggle Score")) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(3:5, width = "7em") %>%
+  add_header_above(c("Model Details" = 2, "Performance Metrics" = 3)) %>%
+  row_spec(0, bold = TRUE, background = "#D3D3D3")
+```
+
+# Results
+
+## Discussion of the Best Performing Model
+
+Overall, the work of past Kaggle user submissions and solutions were very beneficial to the project process. The reason an ensemble method was attempted in the first place was because top leaderboard submissions had used it too! While there were several combinations of ensemble models, ultimately, the best performing was Random Forest + BART + Logistic Regression + Extra Trees with an **AUC of 0.70311**. Considering the competition has been completed for several years, the final predictions csv could not be officially submitted to the leaderboard for ranking. However, the leaderboard itself shows that the predictions would have landed our team in **6,155th place**. 
+
+The model took 1.05 hours to run, which is a point of consideration for the HomeCredit team. There is often a trade off between run time and complexity.
+
+There are several reasons why this model may have performed the best:
+
+1. This method included extra financial feature engineering. The linked discussion board on Kaggle included simple features that helped make models to the top 50, https://www.kaggle.com/competitions/home-credit-default-risk/discussion/64600 . Essentially, the code combines application_train.csv and previous_application.csv to feature engineer 5 columns. This kernel was originally written in python and had to be reworked to R. 
+
+2. Individual models' Kaggle scores:
+
+  -   Random Forest: 0.69877
+  -   BART: 0.70113
+  -   Logistic Regression: 0.67896
+  -   Extra Trees: 0.69339
+  
+Since each of the models were fairly different from each other, unique recipes were used to accurately reflect the needed transformations. This helped the models better follow the intricacies of the data and create better predictions. 
+
+3. The ensemble method approach includes a lasso penalized regression meta learner for building the predictions. This aspect may have been what helped increase the overall accuracy and push the 0.70 boundary.
+
+## Main Takeaways  
+
+Key points learned through the group modeling process:
+
+  **1. Trying various applications of multiple models is crucial.**
+
+  -   Through the modeling process, it became clear that exploring different model types and configurations is important; While some models may perform well with minimal tuning, others require extensive parameter adjustments or specialized techniques to bring out their full potential.
+  -   For example, logistic regression served well as a baseline model. However, testing additional models like Random Forests, LASSO, and BART allowed for the exploration of more complex relationships within the data.
+  -   Ultimately, this trial-and-error process was essential in understanding the nuances of our data set and refining our final ensemble model.
+
+  **2. The raw data alone is not sufficient — feature selection and engineering were key to improving model performance.**
+
+  -   By creating additional features were able to capture meaningful patterns that better represented an applicant’s financial behavior and stability.
+  -   Feature selection also played a role in improving model performance.
+
+  **3. No single model is likely to solve complex business problems - ensemble models often provide the best solution.**
+
+  -   Throughout testing, it became evident that no single model did a great job of capturing the complexity of the data. Some models, like BART and LightGBM, offered strong individual results, but combining them in an ensemble added predictive accuracy.
+  -   Ultimately, the ensemble model outperformed any single algorithm by combining various predictions into a single more robust prediction. 
+  
+  **4. Including additional data does not always have a high return on investment**
+  
+  -   The inclusion of several feature engineered columns from previous_application.csv may have marginally increased model performance and provided a more comprehensive view of each individual.
+  -   This marginal increase may not be worth the additional time and effort required to include the columns.
+
+## Answering the Business Problem
+
+The modeling results indicate that the best-performing ensemble model presents a viable solution to assessing creditworthiness in cases where traditional credit history is limited or unavailable.
+
+The business problem centers on accurately determining creditworthiness for customers lacking formal credit scores. Without this information, capable borrowers often face loan denial or are subjected to predatory lending. The ensemble model effectively addresses this gap by leveraging alternative financial behaviors to predict loan default, providing a more comprehensive measure of creditworthiness than traditional scores alone.
+
+With an AUC score of 0.70311, the ensemble model reliably distinguishes between high-risk and low-risk borrowers. By integrating predictions from Random Forest, BART, Logistic Regression, and Extra Trees, this approach captures diverse aspects of the data for improved prediction. The model offers Home Credit an inclusive and data-driven solution for loan approval, potentially expanding access to fair lending options for individuals who might otherwise be excluded due to a lack of credit history.
+
+# Appendix
+
+## Code of Best Performing Ensemble Method 
+
+### Initial set up: creating grid, using feature engineering, splitting into train and test sets.
+
+```{r, eval=FALSE}
+# Create a control grid so that models can be stacked if desired
+untunedModel <- control_stack_grid() #If tuning over a grid
+
+# Additional feature engineering for this method 
+previous_app_file <- vroom::vroom('previous_application.csv')
+
+# Drop rows with missing 'CNT_PAYMENT' + convert to numeric
+previous_app_file <- previous_app_file |> 
+  na.omit(CNT_PAYMENT) |> 
+  mutate(CNT_PAYMENT = as.numeric(CNT_PAYMENT))
+
+# Adding all FE to train and test 
+train2 <- train2 %>%
+  mutate(screwratio1 = (AMT_CREDIT - AMT_GOODS_PRICE) / AMT_GOODS_PRICE,
+         screwratio2 = (AMT_CREDIT - AMT_GOODS_PRICE) / AMT_CREDIT,
+         saint_CNT = AMT_CREDIT / AMT_ANNUITY,
+         angel_CNT = AMT_GOODS_PRICE / AMT_ANNUITY,
+         simple_diff = AMT_CREDIT - AMT_GOODS_PRICE, 
+         credit_to_annuity_ratio = AMT_CREDIT / AMT_ANNUITY,
+         credit_to_goods_ratio = AMT_CREDIT / AMT_GOODS_PRICE,
+         credit_to_income_ratio = AMT_CREDIT / AMT_INCOME_TOTAL,
+         income_credit_percentage = AMT_INCOME_TOTAL / AMT_CREDIT,
+         income_per_person = AMT_INCOME_TOTAL / as.numeric(CNT_FAM_MEMBERS),
+         payment_rate = AMT_ANNUITY / AMT_CREDIT,
+         phone_to_birth_ratio = DAYS_LAST_PHONE_CHANGE / DAYS_BIRTH)
+
+test <- test %>%
+  mutate(screwratio1 = (AMT_CREDIT - AMT_GOODS_PRICE) / AMT_GOODS_PRICE,
+         screwratio2 = (AMT_CREDIT - AMT_GOODS_PRICE) / AMT_CREDIT,
+         saint_CNT = AMT_CREDIT / AMT_ANNUITY,
+         angel_CNT = AMT_GOODS_PRICE / AMT_ANNUITY,
+         simple_diff = AMT_CREDIT - AMT_GOODS_PRICE, 
+         credit_to_annuity_ratio = AMT_CREDIT / AMT_ANNUITY,
+         credit_to_goods_ratio = AMT_CREDIT / AMT_GOODS_PRICE,
+         credit_to_income_ratio = AMT_CREDIT / AMT_INCOME_TOTAL,
+         income_credit_percentage = AMT_INCOME_TOTAL / AMT_CREDIT,
+         income_per_person = AMT_INCOME_TOTAL / as.numeric(CNT_FAM_MEMBERS),
+         payment_rate = AMT_ANNUITY / AMT_CREDIT,
+         phone_to_birth_ratio = DAYS_LAST_PHONE_CHANGE / DAYS_BIRTH)
+```
+
+### BART
+
+```{r, eval=FALSE}
+# BART 
+my_recipe <- recipe(TARGET ~ ., data = train2) %>%
+  step_unknown(all_nominal_predictors()) |> 
+  step_novel(all_nominal_predictors()) %>%    # Handle unseen levels in test data
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%  # One-hot encode nominal variables
+  step_zv(all_numeric_predictors()) %>%   
+  step_normalize(all_numeric_predictors())
+
+# Make sure it is taking dbarts from tidymodels 
+tidymodels_prefer()
+
+bart_model <- bart(trees=tune()) %>% # BART figures out depth and learn_rate
+set_engine("dbarts") %>% # might need to install
+set_mode("classification")
+
+# Create workflow for the BART model
+bart_wf <- workflow() %>%
+  add_recipe(my_recipe) %>%
+  add_model(bart_model) # Use the model structure for BART, but fit it directly later
+
+# Grid of values to tune over
+grid_of_tuning_params <- grid_regular(trees(), levels = 5) 
+
+# Run the CV
+bart_CV_results <- bart_wf %>%
+  tune_grid(resamples=folds, 
+            grid=grid_of_tuning_params, 
+            metrics=metric_set(accuracy, roc_auc), 
+            control = untunedModel)
+
+# Find best tuning parameters
+bestTune <- bart_CV_results %>%
+  select_best(metric = "roc_auc")
+
+# Finalize the workflow and fit it
+final_wf <- bart_wf %>%
+  finalize_workflow(bestTune) %>% 
+  fit(data=train2)
+
+## Make predictions
+predictions <- predict(final_wf, new_data=test, type="prob") 
+predictions
+
+# Logistic Regression
+# Recipe for logistic model 
+my_recipe <- recipe(TARGET ~ ., data = train2) %>%
+  step_unknown(all_nominal_predictors()) |> 
+  step_novel(all_nominal_predictors()) %>%    # Handle unseen levels in test data
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%  # One-hot encode nominal variables
+  step_zv(all_numeric_predictors()) %>%   
+  step_normalize(all_numeric_predictors())
+```
+
+### Logistic Regression
+
+```{r, eval=FALSE}
+# Logistic regression model 
+log_model <- logistic_reg(mixture=tune(), penalty=tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+
+log_wf <- workflow() %>%
+  add_recipe(my_recipe) %>%
+  add_model(log_model)
+
+## Grid of values to tune over
+grid_of_tuning_params <- grid_regular(mixture(), penalty(), levels = 5) ## L^2 total tuning possibilities
+
+## Run the CV
+log_CV_results <- log_wf %>%
+  tune_grid(resamples=folds,
+            grid=grid_of_tuning_params,
+            metrics=metric_set(accuracy, roc_auc), 
+            control = untunedModel) 
+
+## Find Best Tuning Parameters
+log_bestTune <- log_CV_results %>%
+  select_best(metric = "roc_auc")
+
+## Finalize the Workflow & fit it
+final_wf <-log_wf %>%
+  finalize_workflow(log_bestTune) %>%
+  fit(data=train2)
+
+## Make predictions
+predictions <- predict(final_wf, new_data=test, type="prob")
+predictions
+```
+
+### Random Forest
+
+```{r, eval=FALSE}
+# Recipe  
+my_recipe <- recipe(TARGET ~ ., data = train2) %>%
+  step_unknown(all_nominal_predictors()) |> 
+  step_novel(all_nominal_predictors()) %>%    # Handle unseen levels in test data
+  step_zv(all_numeric_predictors()) %>%   
+  step_normalize(all_numeric_predictors())
+
+rf_model <- rand_forest(min_n=tune(), trees=tune()) %>%
+  set_engine("ranger") %>% # What R function to use7
+  set_mode("classification")
+
+rf_wf <- workflow() %>%
+  add_recipe(my_recipe) %>%
+  add_model(rf_model)
+
+## Grid of values to tune over
+grid_of_tuning_params <- grid_regular(trees(), min_n(), levels = 5) 
+
+## Run the CV
+rf_CV_results <- rf_wf %>%
+  tune_grid(resamples=folds,
+            grid=grid_of_tuning_params,
+            metrics=metric_set(accuracy, roc_auc), 
+            control = untunedModel) 
+
+## Find Best Tuning Parameters
+bestTune <- rf_CV_results %>%
+  select_best(metric = "roc_auc")
+
+## Finalize the Workflow & fit it
+final_wf <-rf_wf %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=train2)
+
+## Make predictions
+predictions <- predict(final_wf, new_data=test, type="prob")
+```
+
+### Extra Trees
+
+```{r, eval=FALSE}
+# Extra Trees
+extra_trees_model <- rand_forest(trees = 1000, min_n = tune(), mode = "classification") %>%
+  set_engine("ranger", splitrule = "extratrees") %>%
+  set_mode("classification")
+
+extra_trees_wf <- workflow() %>%
+  add_model(extra_trees_model) %>%
+  add_recipe(my_recipe)
+
+## Grid of values to tune over
+grid_of_tuning_params <- grid_regular(min_n(), levels = 5)
+
+## Run the CV
+extra_trees_CV_results <- extra_trees_wf %>%
+  tune_grid(resamples=folds,
+            grid=grid_of_tuning_params,
+            metrics=metric_set(accuracy, roc_auc),
+            control = untunedModel) 
+
+## Find Best Tuning Parameters
+bestTune <- extra_trees_CV_results %>%
+  select_best(metric = "roc_auc")
+
+## Finalize the Workflow & fit it
+final_wf <-extra_trees_wf %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=train2)
+
+## Make predictions
+predictions <- predict(final_wf, new_data=test, type="prob")
+```
+
+### Stacking the predictions into an ensemble model
+
+```{r, eval=FALSE}
+# Stacked predictions/ensemble method
+
+# Best performing
+my_stack <- stacks() %>%
+  add_candidates(rf_CV_results) %>%
+  add_candidates(bart_CV_results) %>%
+  add_candidates(log_CV_results) %>%
+  add_candidates(extra_trees_CV_results) 
+
+## Fit the stacked model
+stack_mod <- my_stack %>%
+  blend_predictions() %>% # LASSO penalized regression meta-learner
+  fit_members() ## Fit the members to the dataset
+
+## Use the stacked data to get a prediction
+stacked_predictions <- stack_mod %>% 
+  predict(new_data=test, type = "prob")
+```
+
+
