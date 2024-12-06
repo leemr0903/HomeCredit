@@ -12,7 +12,7 @@ Financial institutions often rely on traditional credit scores, which can exclud
 - Provide business insights to drive data-informed decision-making.
 
 ## Data and Methodology
-- **Data Sources:** Provided datasets include demographic, transactional, and telco data.
+- **Data Sources:** Provided datasets include demographic, transactional, and telco data from orignial [Kaggle](https://www.kaggle.com/c/home-credit-default-risk/overview) competition 
 - **EDA:** Explored trends, identified missing values, and performed data preprocessing.
 - **Feature Engineering:** Created new variables to enhance predictive performance.
 - **Modeling:** Built and fine-tuned a logistic regression classifier to predict loan defaults.
@@ -31,8 +31,3 @@ By leveraging this model, lenders can:
 - Enhance profitability by reducing default rates and expanding the client base.
 - Support financial inclusion initiatives for underserved populations.
 
-## Usage
-To view or run this notebook:
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/maddielee_portfolio.git
