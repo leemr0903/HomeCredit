@@ -21,13 +21,38 @@ Financial institutions often rely on traditional credit scores, which can exclud
 ## Key Contributions
 This notebook includes:
 - [**Exploratory Data Analysis (EDA):**](https://github.com/leemr0903/HomeCredit/blob/1842ce94ad9df862efa3115aa393a1138f51f95a/MSBA_Practice_EDA_Revised.Rmd) Analysis of key patterns and trends in the data.
-- **Feature Engineering:** Detailed feature transformations to improve model accuracy.
+- [**Feature Engineering:**](https://github.com/leemr0903/HomeCredit/blob/f59bdd07fd97513c92e72dcd8701a0ffac447ea9/Feature_Engineering.Rmd) Detailed feature transformations to improve model accuracy.
 - [**Individual Model Development:**](https://github.com/leemr0903/HomeCredit/blob/1842ce94ad9df862efa3115aa393a1138f51f95a/MSBA_Practice_Modeling_Assignment.Rmd) Training and evaluation of the predictive model.
 - [**Final Group Model:**](https://github.com/leemr0903/HomeCredit/blob/cd6ce098af301af94f56342769b62df152a99f30/Group%201%20Modeling%20Notebook%20-%20Whitney%20Holt%2C%20Maddie%20Lee%2C%20Alexia%20Wells%2C%20Leah%20Ekblad.Rmd) Collaborative development of the final predictive model, integrating insights and refinements from individual contributions.
 - [**Results Interpretation:**](https://github.com/leemr0903/HomeCredit/blob/cd6ce098af301af94f56342769b62df152a99f30/Group%201%20Modeling%20Notebook%20-%20Whitney%20Holt%2C%20Maddie%20Lee%2C%20Alexia%20Wells%2C%20Leah%20Ekblad.Rmd) Business value insights derived from the analysis.
 - [**Business Presentation Slides:**](https://github.com/leemr0903/HomeCredit/blob/aec3e9fb9df15415f07db1a5347777ce875380a5/Enhancing%20Loan%20Approval%20Processes%20through%20Predictive%20Modeling%20-%20Capstone%20Project.pptx) Summarized key findings and recommendations in a stakeholder-friendly format, highlighting the model's impact on financial inclusion.
 
 ## Indiviual Contributions
+
+### Group Efforts
+As a team, we collaborated on foundational models to establish a strong baseline for comparison:
+- **Majority Classifier (Baseline):** Developed a simple model predicting the majority class (non-default) to measure improvements against.
+- **Logistic Regression:** Built and evaluated a logistic regression model as an initial approach to predict loan default risk.
+
+---
+
+In addition to group efforts, I contributed the following advanced techniques and analyses:
+
+#### Exploratory Data Analysis (EDA)
+- Conducted independent EDA to uncover trends, identify missing values, and guide feature engineering.  
+- Visualized key patterns to inform modeling strategies and understand variable relationships.
+
+#### Advanced Modeling Techniques
+- **Stepwise Regression:** Applied stepwise regression for feature selection, identifying the most impactful predictors.  
+- **Penalized Regression:** Explored regularization methods (LASSO and Ridge) to handle multicollinearity and improve generalization.  
+- **Random Forest:** Implemented and tuned Random Forest models to capture non-linear relationships and feature importance.
+
+#### Model Tuning and Hyperparameter Optimization
+- Experimented with various configurations and hyperparameters across all models.  
+- Performed grid search and cross-validation to optimize performance and enhance model robustness.
+
+These contributions deepened the insights from the dataset and refined the predictive capabilities of the models, complementing the group’s work.
+
 
 ## Challenges 
 
@@ -91,11 +116,19 @@ Including more data and features does not always justify the time and effort req
 - **Takeaway:** The marginal performance increase was not always worth the additional processing time, emphasizing the importance of balancing cost and benefit when incorporating new data.
 
 ## Solution
+- **Best Model Performance:** The ensemble model achieved an **AUC of 0.70311**, effectively distinguishing high-risk from low-risk borrowers.  
+- **Model Composition:** The ensemble combined predictions from:
+  - Random Forest (AUC: 0.69877)
+  - BART (AUC: 0.70113)
+  - Logistic Regression (AUC: 0.67896)
+  - Extra Trees (AUC: 0.69339)
+- **Computation Time:** The ensemble model required **1.05 hours** to train, balancing complexity and accuracy.  
+- **Kaggle Leaderboard Placement:** Although not officially submitted, results would rank in **6,155th place** on the leaderboard.
 
-  
 ## Business Impact
-By leveraging this model, lenders can:
-- Approve more loans for individuals with limited credit history.
-- Enhance profitability by reducing default rates and expanding the client base.
-- Support financial inclusion initiatives for underserved populations.
+- **Enhanced Credit Evaluation:** The ensemble model provides a reliable method to assess creditworthiness, particularly for individuals without traditional credit histories.
+- **Increased Financial Inclusion:** By leveraging alternative data, the model enables Home Credit to approve loans for underserved borrowers, expanding their customer base.
+- **Risk Mitigation:** The model accurately predicts default risk, helping Home Credit maintain a profitable and low-risk loan portfolio.
+- **Efficiency:** The model demonstrates a practical solution for integrating data-driven decision-making into lending processes.
+
 
