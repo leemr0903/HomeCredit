@@ -16,7 +16,7 @@ Financial institutions often rely on traditional credit scores, which can exclud
 - **EDA:** Explored trends, identified missing values, and performed data preprocessing.
 - **Feature Engineering:** Created new variables to enhance predictive performance.
 - **Modeling:** Built and fine-tuned a logistic regression classifier to predict loan defaults.
-- **Visualization:** Generated insightful plots to communicate findings effectively.
+- **Results and Interpration:** Generated insightful interpretation of results with accompanying business presentation. 
 
 ## Key Contributions
 This notebook includes:
@@ -29,7 +29,6 @@ This notebook includes:
 
 ## Indiviual Contributions
 
-### Group Efforts
 As a team, we collaborated on foundational models to establish a strong baseline for comparison:
 - **Majority Classifier (Baseline):** Developed a simple model predicting the majority class (non-default) to measure improvements against.
 - **Logistic Regression:** Built and evaluated a logistic regression model as an initial approach to predict loan default risk.
