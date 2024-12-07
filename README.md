@@ -61,8 +61,41 @@ This notebook includes:
 - Loading and training on just 5% of the data can take over an hour, limiting experimentation.  
 - Optimized workflows, hardware improvements, or data subsampling may be necessary to address this challenge.
 
-
 ## Learnings
+
+## Lessons Learned from the Modeling Process
+
+### 1. Exploring Multiple Models is Crucial
+Through the modeling process, it became clear that trying various model types and configurations is essential. While some models perform well with minimal tuning, others require extensive parameter adjustments or specialized techniques to achieve optimal results.
+
+- **Baseline Models:** Logistic regression served as a strong baseline, providing an initial understanding of the data and its predictive potential.
+- **Advanced Models:** Testing additional models such as Random Forests, LASSO, and BART enabled the exploration of more complex relationships within the dataset.
+- **Outcome:** This iterative trial-and-error approach was critical for understanding the nuances of the dataset and refining the final ensemble model.
+
+---
+
+### 2. Feature Engineering and Selection Improve Model Performance
+Raw data alone is rarely sufficient for achieving high-performing models. Feature engineering and selection played a vital role in improving the predictive power of our models.
+
+- **Feature Engineering:** By creating additional features, we captured meaningful patterns that better represented applicants’ financial behavior and stability.
+- **Feature Selection:** Carefully choosing the most relevant features helped reduce noise and improved model accuracy.
+
+---
+
+### 3. Ensemble Models Offer Superior Results
+No single model is likely to solve complex business problems effectively. Instead, combining multiple models in an ensemble often provides the best solution.
+
+- **Individual Model Results:** Some models, like BART and LightGBM, offered strong individual performance.
+- **Ensemble Approach:** By combining predictions from various models, the ensemble model delivered more robust and accurate results, outperforming any single algorithm.
+
+---
+
+### 4. Additional Data Does Not Always Yield High ROI
+Including more data and features does not always justify the time and effort required for processing.
+
+- **Example:** Adding feature-engineered columns from `previous_application.csv` provided a more comprehensive view of applicants and marginally improved model performance.
+- **Takeaway:** The marginal performance increase was not always worth the additional processing time, emphasizing the importance of balancing cost and benefit when incorporating new data.
+
   
 ## Business Impact
 By leveraging this model, lenders can:
