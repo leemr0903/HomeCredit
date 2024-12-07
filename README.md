@@ -31,6 +31,37 @@ This notebook includes:
 
 ## Challenges 
 
+### 1. Missing Values
+- Many features contain missing values, which can introduce bias if not handled properly.  
+- Missing values may represent a lack of information, errors in data entry, or genuine absence of certain attributes.  
+- Imputation techniques must be carefully chosen to avoid distorting the underlying patterns in the data.  
+
+### 2. High Cardinality
+- Certain categorical variables, such as occupation type or income type, have numerous unique values.  
+- High cardinality increases model complexity and can lead to overfitting, especially when one-hot encoding is applied without adequate dimensionality reduction.  
+
+### 3. Imbalanced Target Variable
+- The target variable (loan default) is heavily imbalanced, with significantly more non-default than default cases.  
+- This imbalance can bias models toward predicting the majority class, reducing their ability to identify true default risks.  
+
+### 4. Inconsistent Factor Levels
+- Some categorical variables contain levels present in one dataset but missing in another (e.g., `NAME_INCOME_TYPE`).  
+- This inconsistency complicates model application across datasets and requires alignment of factor levels or handling of unknown levels.  
+
+### 5. Collinearity Among Features
+- Certain features, such as income and credit amount, are highly correlated, leading to multicollinearity in linear models.  
+- Multicollinearity inflates the variance of coefficient estimates, making the model sensitive to small changes in the data and potentially reducing interpretability.  
+
+### 6. Outliers and Noise
+- Some numerical features contain extreme values that may be outliers or data entry errors.  
+- These values can distort model training, especially in distance-based or sensitive algorithms, necessitating careful inspection and possible transformation or filtering.  
+
+### 7. Large Dataset and Load Times
+- The size of the dataset significantly impacts processing time.  
+- Loading and training on just 5% of the data can take over an hour, limiting experimentation.  
+- Optimized workflows, hardware improvements, or data subsampling may be necessary to address this challenge.
+
+
 ## Learnings
   
 ## Business Impact
