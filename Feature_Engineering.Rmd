@@ -1,0 +1,64 @@
+---
+title: "Feature Engineering Overview"
+author: "Maddie Lee"
+date: "2024-12-07"
+output:
+  html_document:
+    toc: true
+execute:
+  warning: false
+  message: false
+---
+
+## Data Preprocessing
+
+Here is an overview of completed steps in the exploratory data analysis (EDA) stage:
+
+-   Converted categorical variables to factors
+-   Imputed missing data with mean and mode
+-   Removed near zero variance and zero variance predictors
+-   Removed highly correlated predictors
+-   Conducted feature engineering with binning
+-   Ensured factor levels were aligned between the train and test sets
+
+Incorporating feature engineering significantly improved the success of the models. As mentioned earlier, there were two feature engineered variables created in the EDA process. These were OWN_CAR_AGE_BIN and HOUSING_INFO, both were binning variables.
+
+The original OWN_CAR_AGE variable, a numerical field representing the age of a client’s car, had 200,912 missing values, indicating that missing values are informative. Thus, to keep the integrity of the variable, it was transformed into a categorical feature with four levels: Missing, Low, Medium, and High. To determine the ranges of car age, some research was conducted. As of 2024, S&P Global stated that most vehicles are 12.6 years old on average. Clement, a pre-owned car company, suggested that a “sweet spot” for cars is between 2-5 years old and 15-20 years tend to be nearing the end of their services (https://clementpreowned.com/blog/how-many-miles-car-lasts). For that reason, Low is from 0-5, Medium from 6-15, and High from 16-100.
+
+The HOUSING_INFO variable was created to consolidate approximately 25 housing-related columns. This approach assessed whether applicants’ housing data was fully, partially, or minimally complete. The data was categorized as 'All' if every column was filled, 'Some' for more than two columns completed, and 'Few' if only 0-2 columns contained values. It is important to note that missing values were excluded from being counted as filled entries.
+
+## Creating New Columns
+
+The calculated columns below have been adapted from winning Kaggle notebooks.
+
+  1.	*Annuity to Income Percentage*: This feature captures the proportion of an applicant's income that is dedicated to loan annuity payments. A higher percentage suggests that a larger portion of the applicant’s income goes toward debt repayment, which could indicate potential financial strain.
+
+  2.	*Car to Age Ratio*: This ratio compares the age of the applicant's car to their own age, potentially indicating the timing of asset acquisition. A lower ratio may imply that the individual acquired the car more recently, which could correlate with financial stability or asset-building behavior.
+
+  3.	*Car to Employment Ratio*: By dividing the car’s age by the applicant’s employment duration, this feature provides insight into asset longevity relative to job stability. A longer employment duration combined with a relatively newer car may suggest financial resilience and asset maintenance capability.
+
+  4.	*Children to Family Members Ratio*: This feature represents the proportion of children in the family, highlighting the applicant's dependency load. A higher ratio might indicate a greater financial burden per family member, as there are more dependents per income earner.
+
+  5.	*Credit to Annuity Ratio*: This ratio measures the scale of the loan relative to the annual annuity payments. A higher value might suggest a substantial loan burden, which could increase financial strain and affect the applicant’s repayment ability.
+
+  6.	*Credit to Goods Price Ratio*: The ratio of the total credit amount to the price of the goods financed indicates potential over- or under-financing. This feature could reveal if the loan significantly exceeds the cost of the item being financed, which may correlate with riskier loan profiles.
+
+  7.	*Credit to Income Ratio*: This feature assesses the proportion of credit in relation to total income, highlighting financial strain. A higher ratio suggests that the applicant's loan amount is large relative to their income, which may indicate potential difficulty in managing repayments.
+
+  8.	*Employment Duration to Age Percentage*: This ratio provides insight into career stability by showing employment duration as a percentage of the applicant's life span. A higher percentage may imply consistent employment, which is often a positive indicator of financial reliability.
+
+  9.	*Income to Credit Percentage*: This feature compares the applicant's income to the credit amount, representing income adequacy for loan repayment. A higher ratio suggests that the applicant’s income level is sufficient to support the loan amount, which could imply lower risk.
+
+  10.	*Income per Child*: This feature calculates the average income available per child in the family, giving insight into financial capacity relative to family size. A higher income per child might indicate more financial flexibility to manage household needs and debt obligations.
+
+  11.	*Income per Family Member*: By dividing income by the number of family members, this feature shows the income available per person. It provides a view of income distribution within the household, which could indicate financial stability when income per person is relatively high.
+
+  12.	*Payment Rate*: The payment rate represents the proportion of the loan that is repaid annually. A higher payment rate suggests a more aggressive repayment schedule, which may indicate a stronger commitment to debt clearance.
+
+  13.	*Phone Change to Age Ratio*: This ratio compares the time since the applicant last changed their phone to their age, potentially indicating stability in communication. Applicants with recent phone changes may demonstrate instability, whereas a longer duration could suggest consistency.
+
+  14.	*Phone Change to Employment Duration Ratio*: This feature measures the time since the last phone change relative to employment duration, which could hint at job or residency stability. A longer duration since the last phone change might correlate with consistency in employment or personal life.
+  
+## Subsetting
+
+Due to the exceptionally large data set, five percent of the training data was used to fit the models. This was done through downsampling the majority class until it was the same size as the minority class. 
