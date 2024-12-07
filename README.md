@@ -61,8 +61,6 @@ This notebook includes:
 - Loading and training on just 5% of the data can take over an hour, limiting experimentation.  
 - Optimized workflows, hardware improvements, or data subsampling may be necessary to address this challenge.
 
-## Learnings
-
 ## Lessons Learned from the Modeling Process
 
 ### 1. Exploring Multiple Models is Crucial
