@@ -25,7 +25,13 @@ This notebook includes:
 - [**Individual Model Development:**](https://github.com/leemr0903/HomeCredit/blob/1842ce94ad9df862efa3115aa393a1138f51f95a/MSBA_Practice_Modeling_Assignment.Rmd) Training and evaluation of the predictive model.
 - [**Final Group Model:**](https://github.com/leemr0903/HomeCredit/blob/cd6ce098af301af94f56342769b62df152a99f30/Group%201%20Modeling%20Notebook%20-%20Whitney%20Holt%2C%20Maddie%20Lee%2C%20Alexia%20Wells%2C%20Leah%20Ekblad.Rmd) Collaborative development of the final predictive model, integrating insights and refinements from individual contributions.
 - **Results Interpretation:** Business value insights derived from the analysis.
-- **Business Presentation Slides:** Summarized key findings and recommendations in a stakeholder-friendly format, highlighting the model's impact on financial inclusion.
+- [**Business Presentation Slides:**](https://github.com/leemr0903/HomeCredit/blob/aec3e9fb9df15415f07db1a5347777ce875380a5/Enhancing%20Loan%20Approval%20Processes%20through%20Predictive%20Modeling%20-%20Capstone%20Project.pptx) Summarized key findings and recommendations in a stakeholder-friendly format, highlighting the model's impact on financial inclusion.
+
+## Indiviual Contributions
+
+## Challenges 
+
+## Learnings
   
 ## Business Impact
 By leveraging this model, lenders can:
