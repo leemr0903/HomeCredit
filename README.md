@@ -90,6 +90,8 @@ Including more data and features does not always justify the time and effort req
 - **Example:** Adding feature-engineered columns from `previous_application.csv` provided a more comprehensive view of applicants and marginally improved model performance.
 - **Takeaway:** The marginal performance increase was not always worth the additional processing time, emphasizing the importance of balancing cost and benefit when incorporating new data.
 
+## Solution
+
   
 ## Business Impact
 By leveraging this model, lenders can:
