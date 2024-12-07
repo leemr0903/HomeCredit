@@ -24,7 +24,7 @@ This notebook includes:
 - **Feature Engineering:** Detailed feature transformations to improve model accuracy.
 - [**Individual Model Development:**](https://github.com/leemr0903/HomeCredit/blob/1842ce94ad9df862efa3115aa393a1138f51f95a/MSBA_Practice_Modeling_Assignment.Rmd) Training and evaluation of the predictive model.
 - [**Final Group Model:**](https://github.com/leemr0903/HomeCredit/blob/cd6ce098af301af94f56342769b62df152a99f30/Group%201%20Modeling%20Notebook%20-%20Whitney%20Holt%2C%20Maddie%20Lee%2C%20Alexia%20Wells%2C%20Leah%20Ekblad.Rmd) Collaborative development of the final predictive model, integrating insights and refinements from individual contributions.
-- **Results Interpretation:** Business value insights derived from the analysis.
+- [**Results Interpretation:**](https://github.com/leemr0903/HomeCredit/blob/cd6ce098af301af94f56342769b62df152a99f30/Group%201%20Modeling%20Notebook%20-%20Whitney%20Holt%2C%20Maddie%20Lee%2C%20Alexia%20Wells%2C%20Leah%20Ekblad.Rmd) Business value insights derived from the analysis.
 - [**Business Presentation Slides:**](https://github.com/leemr0903/HomeCredit/blob/aec3e9fb9df15415f07db1a5347777ce875380a5/Enhancing%20Loan%20Approval%20Processes%20through%20Predictive%20Modeling%20-%20Capstone%20Project.pptx) Summarized key findings and recommendations in a stakeholder-friendly format, highlighting the model's impact on financial inclusion.
 
 ## Indiviual Contributions
@@ -70,7 +70,6 @@ Through the modeling process, it became clear that trying various model types an
 - **Advanced Models:** Testing additional models such as Random Forests, LASSO, and BART enabled the exploration of more complex relationships within the dataset.
 - **Outcome:** This iterative trial-and-error approach was critical for understanding the nuances of the dataset and refining the final ensemble model.
 
----
 
 ### 2. Feature Engineering and Selection Improve Model Performance
 Raw data alone is rarely sufficient for achieving high-performing models. Feature engineering and selection played a vital role in improving the predictive power of our models.
@@ -78,15 +77,12 @@ Raw data alone is rarely sufficient for achieving high-performing models. Featur
 - **Feature Engineering:** By creating additional features, we captured meaningful patterns that better represented applicants’ financial behavior and stability.
 - **Feature Selection:** Carefully choosing the most relevant features helped reduce noise and improved model accuracy.
 
----
 
 ### 3. Ensemble Models Offer Superior Results
 No single model is likely to solve complex business problems effectively. Instead, combining multiple models in an ensemble often provides the best solution.
 
 - **Individual Model Results:** Some models, like BART and LightGBM, offered strong individual performance.
 - **Ensemble Approach:** By combining predictions from various models, the ensemble model delivered more robust and accurate results, outperforming any single algorithm.
-
----
 
 ### 4. Additional Data Does Not Always Yield High ROI
 Including more data and features does not always justify the time and effort required for processing.
