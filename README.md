@@ -115,6 +115,9 @@ Including more data and features does not always justify the time and effort req
 - **Takeaway:** The marginal performance increase was not always worth the additional processing time, emphasizing the importance of balancing cost and benefit when incorporating new data.
 
 ## Solution
+
+### Final Model Description
+
 - **Best Model Performance:** The ensemble model achieved an **AUC of 0.70311**, effectively distinguishing high-risk from low-risk borrowers.  
 - **Model Composition:** The ensemble combined predictions from:
   - Random Forest (AUC: 0.69877)
@@ -123,6 +126,12 @@ Including more data and features does not always justify the time and effort req
   - Extra Trees (AUC: 0.69339)
 - **Computation Time:** The ensemble model required **1.05 hours** to train, balancing complexity and accuracy.  
 - **Kaggle Leaderboard Placement:** Although not officially submitted, results would rank in **6,155th place** on the leaderboard.
+
+---
+
+The ensemble model addresses the challenge of assessing creditworthiness for individuals without traditional credit histories by leveraging alternative data sources like demographic and transactional information. This approach fills the gap left by traditional scoring methods, offering a more inclusive evaluation process.
+
+The ensemble method effectively handles imbalanced data by combining models with diverse strengths. For example, Random Forest captures complex feature interactions, while Logistic Regression provides interpretable results. This integration produces a robust prediction system, demonstrated by an AUC score of 0.70311. The model's accuracy enables Home Credit to reduce default risks while expanding loan approvals for underserved populations, aligning with the business goal of enhancing financial inclusion.
 
 ## Business Impact
 - **Enhanced Credit Evaluation:** The ensemble model provides a reliable method to assess creditworthiness, particularly for individuals without traditional credit histories.
